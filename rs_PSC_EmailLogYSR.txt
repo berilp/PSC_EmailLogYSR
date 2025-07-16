@@ -11,7 +11,7 @@
 //end notes 
 
 //select header 
-select  p.scode Property_Code,
+select distinct p.scode Property_Code,
 p.saddr1 PropertyName, p.hmy phmy,
 p.saddr2 StreetAddress,
   DATENAME(WEEKDAY, CAST('#FromDate#' AS DATETIME)) + ', ' +
