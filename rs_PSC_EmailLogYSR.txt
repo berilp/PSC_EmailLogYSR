@@ -1,0 +1,318 @@
+//notes 
+  Script Name : rs_PSC_EmailLogYSR.txt
+  Client Name : Public Storage
+  Created On  : 2025-07-16
+  Created By  : Beril Pehlivan
+  Description : YSR - Email Log 
+  - run for multiple properties
+  Modified On : 
+
+
+//end notes 
+
+
+//select display 
+
+SELECT
+  distinct eq.hMy Id,
+  eq.iRecPointerType RecordType,
+  N'Email' sType,
+  eq.hRecPointer RecordId,
+  eq.sSender Sender,
+  eq.dtEnterDate DateSent,
+  eq.dtSentDate DateReSent,
+  eq.sSubject Subject,
+  substring(
+    replace(
+      replace(
+        (
+          Select
+            ltrim(
+              rtrim(
+                isNull(ReceipantNameTab.sFirstName, '') + N' ' + isNull(ReceipantNameTab.sLastName, '')
+              )
+            ) as ReceipantName
+          From
+            Email_Address ReceipantNameTab
+          Where
+            ReceipantNameTab.iAddressType = 1
+            And ReceipantNameTab.hEmail_que = eq.hMy For XML Path('')
+        ),
+        N'<ReceipantName>',
+        ''
+      ),
+      N'</ReceipantName>',
+      N'; 
+'
+    ),
+    0,
+    len(
+      replace(
+        replace(
+          (
+            Select
+              ltrim(
+                rtrim(
+                  isNull(ReceipantNameTab.sFirstName, '') + N' ' + isNull(ReceipantNameTab.sLastName, '')
+                )
+              ) as ReceipantName
+            From
+              Email_Address ReceipantNameTab
+            Where
+              ReceipantNameTab.iAddressType = 1
+              And ReceipantNameTab.hEmail_que = eq.hMy For XML Path('')
+          ),
+          N'<ReceipantName>',
+          ''
+        ),
+        N'</ReceipantName>',
+        N'; '
+      )
+    )
+  ) as ReceipantNames,
+  substring(
+    replace(
+      replace(
+        (
+          Select
+            ltrim(rtrim(ReceipantEmailTab.sEmailAddress)) as ReceipantEmail
+          From
+            Email_Address ReceipantEmailTab
+          Where
+            ReceipantEmailTab.iAddressType = 1
+            And ReceipantEmailTab.hEmail_que = eq.hMy For XML Path('')
+        ),
+        N'<ReceipantEmail>',
+        ''
+      ),
+      N'</ReceipantEmail>',
+      N';'
+    ),
+    0,
+    len(
+      replace(
+        replace(
+          (
+            Select
+              ltrim(rtrim(ReceipantEmailTab.sEmailAddress)) as ReceipantEmail
+            From
+              Email_Address ReceipantEmailTab
+            Where
+              ReceipantEmailTab.iAddressType = 1
+              And ReceipantEmailTab.hEmail_que = eq.hMy For XML Path('')
+          ),
+          N'<ReceipantEmail>',
+          ''
+        ),
+        N'</ReceipantEmail>',
+        N'; '
+      )
+    )
+  ) as ReceipantEmails,
+  Case isnull(eq.iStatus, 0) When 2 Then N'Success' else N'Error' end EmailStatus,
+  Case when len(isnull(eq.sMsg, '')) > 126 then substring(eq.sMsg, 0, 126) + N'....' else eq.sMsg end Message,
+  Case isnull(eq.iStatus, 0) When 2 Then N'Success' else N'Error' end Status
+FROM
+  Email_Que eq
+  LEFT JOIN Email_Address toa on (
+    toa.hEmail_que = eq.hMy
+    and toa.iAddressType = 1
+  )
+WHERE
+  eq.iRecPointerType = 1
+  AND eq.hRecPointer in (
+    select
+      t.hMyPerson
+    from
+      tenant t
+    where
+    t.hproperty in (964, 1559)
+     AND t.iStatus in (0, 1, 4, 2, 3)
+  )
+ -- AND eq.hRecPointer in (256549)
+ and eq.dtEnterDate Between '2025-05-01' and '2025-05-30'
+UNION ALL
+SELECT
+  E.hMy [id],
+  E.IPERSONTYPE RecordType,
+  N'Comm Hub Email' sType,
+  E.hGuest RecordId,
+  E.sEmailFrom Sender,
+  E.dtDate DateSent,
+  E.dtDate DateReSent,
+  E.SEMAILSUBJECT Subject,
+  '' ReceipantNames,
+  ISNULL(E.sEmailTo, '') ReceipantEmails,
+  N'Success' EmailStatus,
+  E.SEMAILMESSAGE Message,
+  N'Success' Status
+FROM
+  ResCRMEmails E
+  LEFT JOIN ResCrmQueue Q ON Q.sSessionId = E.sSessionId
+  LEFT JOIN pmuser USR ON USR.uname = Ltrim(Rtrim(E.operatoremail))
+  LEFT JOIN premployee EMP ON EMP.huser = USR.hmy
+  LEFT JOIN agentnames AN ON AN.hemployee = EMP.hmyperson
+  AND AN.hprop = E.hproperty
+  LEFT JOIN agentnames AC ON AC.hmy = ISNULL(E.hagent, 0)
+  LEFT JOIN Tenant T ON T.hMyPerson = E.hResident
+  LEFT JOIN Property P ON P.hMy = E.hProperty
+  LEFT JOIN RentCafePropertyInformation RCPI ON RCPI.hProperty = E.hProperty
+  LEFT JOIN Prospect Pr ON Pr.hMy = E.hGuest
+  LEFT JOIN ResCRMCustomer PRC ON Pr.hResCRMCustomer = PRC.hMy
+  LEFT JOIN (
+    SELECT
+      hResCRMEmail,
+      count(*) as count
+    FROM
+      rescrmemails_attachments
+    GROUP BY
+      hResCRMEmail
+  ) att on att.hResCRMEmail = e.hMy
+  LEFT JOIN (
+    SELECT
+      DISTINCT hResCRMEmails,
+      STUFF(
+        (
+          SELECT
+            N',' + CAST(t.semailAddress AS VARCHAR(MAX))
+          FROM
+            rescrmemail_addresses t
+          WHERE
+            iAddressType = 1
+            AND t.hResCrmEmails = ea.hResCrmEmails FOR XML PATH ('')
+        ),
+        1,
+        1,
+        ''
+      ) [Recipients]
+    From
+      rescrmemail_addresses ea
+    Where
+      ea.iAddressType = 1
+  ) toAddresses on toAddresses.hResCRMEmails = e.hMy
+  LEFT JOIN (
+    SELECT
+      DISTINCT hResCRMEmails,
+      STUFF(
+        (
+          SELECT
+            N',' + CAST(t.semailAddress AS VARCHAR(MAX))
+          FROM
+            rescrmemail_addresses t
+          WHERE
+            iAddressType = 2
+            AND t.hResCrmEmails = ea.hResCrmEmails FOR XML PATH ('')
+        ),
+        1,
+        1,
+        ''
+      ) [Recipients]
+    From
+      rescrmemail_addresses ea
+    WHERE
+      ea.iAddressType = 2
+  ) ccAddresses on ccAddresses.hResCRMEmails = e.hMy
+WHERE
+  1 = 1
+  AND ISNULL(e.iEmailType, 2) <> 0
+  AND e.sEmailId IS NOT NULL
+  and e.sEmailId <> ''
+ -- and PRC.hmy = 438473
+  and E.hproperty in (964, 1559)
+  AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
+UNION ALL
+SELECT
+  E.hMy [id],
+  E.IPERSONTYPE RecordType,
+  N'Comm Hub Email' sType,
+  E.hResident RecordId,
+  E.sEmailFrom Sender,
+  E.dtDate DateSent,
+  E.dtDate DateReSent,
+  E.SEMAILSUBJECT Subject,
+  '' ReceipantNames,
+  ISNULL(E.sEmailTo, '') ReceipantEmails,
+  N'Success' EmailStatus,
+  E.SEMAILMESSAGE Message,
+  N'Success' Status
+FROM
+  ResCRMEmails E
+  LEFT JOIN ResCrmQueue Q ON Q.sSessionId = E.sSessionId
+  LEFT JOIN pmuser USR ON USR.uname = Ltrim(Rtrim(E.operatoremail))
+  LEFT JOIN premployee EMP ON EMP.huser = USR.hmy
+  LEFT JOIN agentnames AN ON AN.hemployee = EMP.hmyperson
+  AND AN.hprop = E.hproperty
+  LEFT JOIN agentnames AC ON AC.hmy = ISNULL(E.hagent, 0)
+  LEFT JOIN Tenant T ON T.hMyPerson = E.hResident
+  LEFT JOIN Property P ON P.hMy = E.hProperty
+  LEFT JOIN RentCafePropertyInformation RCPI ON RCPI.hProperty = E.hProperty
+  LEFT JOIN Person pe ON T.hMyPerson = pe.hMy
+  LEFT JOIN ResCRMCustomer RRC ON pe.hResCRMCustomer = RRC.hMy
+  LEFT JOIN (
+    SELECT
+      hResCRMEmail,
+      count(*) as count
+    FROM
+      rescrmemails_attachments
+    GROUP BY
+      hResCRMEmail
+  ) att on att.hResCRMEmail = e.hMy
+  LEFT JOIN (
+    SELECT
+      DISTINCT hResCRMEmails,
+      STUFF(
+        (
+          SELECT
+            N',' + CAST(t.semailAddress AS VARCHAR(MAX))
+          FROM
+            rescrmemail_addresses t
+          WHERE
+            iAddressType = 1
+            AND t.hResCrmEmails = ea.hResCrmEmails FOR XML PATH ('')
+        ),
+        1,
+        1,
+        ''
+      ) [Recipients]
+    From
+      rescrmemail_addresses ea
+    Where
+      ea.iAddressType = 1
+  ) toAddresses on toAddresses.hResCRMEmails = e.hMy
+  LEFT JOIN (
+    SELECT
+      DISTINCT hResCRMEmails,
+      STUFF(
+        (
+          SELECT
+            N',' + CAST(t.semailAddress AS VARCHAR(MAX))
+          FROM
+            rescrmemail_addresses t
+          WHERE
+            iAddressType = 2
+            AND t.hResCrmEmails = ea.hResCrmEmails FOR XML PATH ('')
+        ),
+        1,
+        1,
+        ''
+      ) [Recipients]
+    From
+      rescrmemail_addresses ea
+    WHERE
+      ea.iAddressType = 2
+  ) ccAddresses on ccAddresses.hResCRMEmails = e.hMy
+WHERE
+  1 = 1
+  AND ISNULL(e.iEmailType, 2) <> 0
+  AND e.sEmailId IS NOT NULL
+  and e.sEmailId <> ''
+  and t.hproperty in (964, 1559)
+ -- and RRC.hmy = 438473
+ AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
+ORDER BY
+  DateSent desc,
+  ReceipantNames,
+  RecordId
+
+
+//end select 
