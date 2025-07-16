@@ -10,6 +10,97 @@
 
 //end notes 
 
+//select header 
+select  p.scode Property_Code,
+p.saddr1 PropertyName, p.hmy phmy,
+p.saddr2 StreetAddress,
+  DATENAME(WEEKDAY, CAST('#FromDate#' AS DATETIME)) + ', ' +
+  DATENAME(MONTH, CAST('#FromDate#' AS DATETIME)) + ' ' +
+  CAST(DAY(CAST('#FromDate#' AS DATETIME)) AS VARCHAR) + ', ' +
+  CAST(YEAR(CAST('#FromDate#' AS DATETIME)) AS VARCHAR) 
+  + ' to ' +
+  DATENAME(WEEKDAY, CAST('#ToDate#' AS DATETIME)) + ', ' +
+  DATENAME(MONTH, CAST('#ToDate#' AS DATETIME)) + ' ' +
+  CAST(DAY(CAST('#ToDate#' AS DATETIME)) AS VARCHAR) + ', ' +
+  CAST(YEAR(CAST('#ToDate#' AS DATETIME)) AS VARCHAR) 
+  AS ReportDateRange
+  FROM
+  ResCRMEmails E
+  LEFT JOIN ResCrmQueue Q ON Q.sSessionId = E.sSessionId
+  LEFT JOIN pmuser USR ON USR.uname = Ltrim(Rtrim(E.operatoremail))
+  LEFT JOIN premployee EMP ON EMP.huser = USR.hmy
+  LEFT JOIN agentnames AN ON AN.hemployee = EMP.hmyperson
+  AND AN.hprop = E.hproperty
+  LEFT JOIN agentnames AC ON AC.hmy = ISNULL(E.hagent, 0)
+  LEFT JOIN Tenant T ON T.hMyPerson = E.hResident
+  LEFT JOIN Property P ON P.hMy = E.hProperty
+  LEFT JOIN RentCafePropertyInformation RCPI ON RCPI.hProperty = E.hProperty
+  LEFT JOIN Person pe ON T.hMyPerson = pe.hMy
+  LEFT JOIN ResCRMCustomer RRC ON pe.hResCRMCustomer = RRC.hMy
+  LEFT JOIN (
+    SELECT
+      hResCRMEmail,
+      count(*) as count
+    FROM
+      rescrmemails_attachments
+    GROUP BY
+      hResCRMEmail
+  ) att on att.hResCRMEmail = e.hMy
+  LEFT JOIN (
+    SELECT
+      DISTINCT hResCRMEmails,
+      STUFF(
+        (
+          SELECT
+            N',' + CAST(t.semailAddress AS VARCHAR(MAX))
+          FROM
+            rescrmemail_addresses t
+          WHERE
+            iAddressType = 1
+            AND t.hResCrmEmails = ea.hResCrmEmails FOR XML PATH ('')
+        ),
+        1,
+        1,
+        ''
+      ) [Recipients]
+    From
+      rescrmemail_addresses ea
+    Where
+      ea.iAddressType = 1
+  ) toAddresses on toAddresses.hResCRMEmails = e.hMy
+  LEFT JOIN (
+    SELECT
+      DISTINCT hResCRMEmails,
+      STUFF(
+        (
+          SELECT
+            N',' + CAST(t.semailAddress AS VARCHAR(MAX))
+          FROM
+            rescrmemail_addresses t
+          WHERE
+            iAddressType = 2
+            AND t.hResCrmEmails = ea.hResCrmEmails FOR XML PATH ('')
+        ),
+        1,
+        1,
+        ''
+      ) [Recipients]
+    From
+      rescrmemail_addresses ea
+    WHERE
+      ea.iAddressType = 2
+  ) ccAddresses on ccAddresses.hResCRMEmails = e.hMy
+WHERE
+  1 = 1
+  AND ISNULL(e.iEmailType, 2) <> 0
+  AND e.sEmailId IS NOT NULL
+  and e.sEmailId <> ''
+  and p.hmy in (964, 1559)
+ -- and RRC.hmy = 438473
+ AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
+
+
+//end select
 
 //select display 
 
