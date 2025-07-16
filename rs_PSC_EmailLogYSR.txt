@@ -12,6 +12,7 @@
 
 
 //select display 
+
 SELECT
   distinct eq.hMy Id,
   eq.iRecPointerType RecordType,
@@ -128,8 +129,9 @@ WHERE
       t.hMyPerson
     from
       tenant t
+    inner join property p on p.hmy = t.hproperty
     where
-    t.hproperty in (964, 1559)
+    p.hmy in (964, 1559)
      AND t.iStatus in (0, 1, 4, 2, 3)
   )
  -- AND eq.hRecPointer in (256549)
@@ -225,7 +227,7 @@ WHERE
   AND e.sEmailId IS NOT NULL
   and e.sEmailId <> ''
  -- and PRC.hmy = 438473
-  and E.hproperty in (964, 1559)
+  and p.hmy in (964, 1559)
   AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
 UNION ALL
 SELECT
@@ -317,7 +319,7 @@ WHERE
   AND ISNULL(e.iEmailType, 2) <> 0
   AND e.sEmailId IS NOT NULL
   and e.sEmailId <> ''
-  and t.hproperty in (964, 1559)
+  and p.hmy in (964, 1559)
  -- and RRC.hmy = 438473
  AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
 ORDER BY
