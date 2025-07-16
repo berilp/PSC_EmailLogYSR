@@ -12,13 +12,16 @@
 
 
 //select display 
-
 SELECT
   distinct eq.hMy Id,
   eq.iRecPointerType RecordType,
   N'Email' sType,
   eq.hRecPointer RecordId,
   eq.sSender Sender,
+  N'Rental' Type,
+  N'' Tenant,
+  N'' Unit,
+  N'No' RegisteredMail,
   eq.dtEnterDate DateSent,
   eq.dtSentDate DateReSent,
   eq.sSubject Subject,
@@ -138,6 +141,10 @@ SELECT
   N'Comm Hub Email' sType,
   E.hGuest RecordId,
   E.sEmailFrom Sender,
+  N'Rental' Type,
+  N'' Tenant,
+  N'' Unit,
+  N'No' RegisteredMail,
   E.dtDate DateSent,
   E.dtDate DateReSent,
   E.SEMAILSUBJECT Subject,
@@ -227,6 +234,10 @@ SELECT
   N'Comm Hub Email' sType,
   E.hResident RecordId,
   E.sEmailFrom Sender,
+  N'Rental' Type,
+  t.scode Tenant,
+  t.sunitcode Unit,
+  N'No' RegisteredMail,
   E.dtDate DateSent,
   E.dtDate DateReSent,
   E.SEMAILSUBJECT Subject,
