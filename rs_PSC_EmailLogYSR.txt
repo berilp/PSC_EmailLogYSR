@@ -95,9 +95,10 @@ WHERE
   AND ISNULL(e.iEmailType, 2) <> 0
   AND e.sEmailId IS NOT NULL
   and e.sEmailId <> ''
-  and p.hmy in (964, 1559)
+  --and p.hmy in (964, 1559)
+  #conditions#
  -- and RRC.hmy = 438473
- AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
+ AND E.dtDate BETWEEN '#FromDate#' AND '#ToDate#'
 
 
 //end select
@@ -105,7 +106,8 @@ WHERE
 //select display 
 
 SELECT
-  distinct eq.hMy Id,
+  distinct N'' Property_Code,
+  eq.hMy Id,
   eq.iRecPointerType RecordType,
   N'Email' sType,
   eq.hRecPointer RecordId,
@@ -221,14 +223,16 @@ WHERE
     from
       tenant t
     inner join property p on p.hmy = t.hproperty
-    where
-    p.hmy in (964, 1559)
+    where 1=1 
+    #conditions#
+    --p.hmy in (964, 1559)
      AND t.iStatus in (0, 1, 4, 2, 3)
   )
  -- AND eq.hRecPointer in (256549)
- and eq.dtEnterDate Between '2025-05-01' and '2025-05-30'
+ and eq.dtEnterDate Between '#FromDate#' AND '#ToDate#'
 UNION ALL
 SELECT
+  p.scode Property_Code,
   E.hMy [id],
   E.IPERSONTYPE RecordType,
   N'Comm Hub Email' sType,
@@ -318,10 +322,12 @@ WHERE
   AND e.sEmailId IS NOT NULL
   and e.sEmailId <> ''
  -- and PRC.hmy = 438473
-  and p.hmy in (964, 1559)
-  AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
+ -- and p.hmy in (964, 1559)
+ #conditions#
+  AND E.dtDate BETWEEN '#FromDate#' AND '#ToDate#'
 UNION ALL
 SELECT
+  p.scode Property_Code,
   E.hMy [id],
   E.IPERSONTYPE RecordType,
   N'Comm Hub Email' sType,
@@ -407,12 +413,13 @@ FROM
   ) ccAddresses on ccAddresses.hResCRMEmails = e.hMy
 WHERE
   1 = 1
+  #conditions#
   AND ISNULL(e.iEmailType, 2) <> 0
   AND e.sEmailId IS NOT NULL
   and e.sEmailId <> ''
-  and p.hmy in (964, 1559)
+  --and p.hmy in (964, 1559)
  -- and RRC.hmy = 438473
- AND E.dtDate BETWEEN '2025-05-01' AND '2025-05-30'
+ AND E.dtDate BETWEEN '#FromDate#' AND '#ToDate#'
 ORDER BY
   DateSent desc,
   ReceipantNames,
